@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vera — Custom Dev Intelligence</title>
+<style>
+  :root {
+    --bg: #F7F6F3; --surface: #FFFFFF; --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14); --text: #1A1A18; --muted: #6B6B67;
+    --hint: #9E9E9A; --accent: #2D4EFF; --accent-soft: #EEF1FF;
+    --green: #1A7A4A; --green-bg: #E8F5EE; --green-border: #A7D9BC;
+    --amber: #8A5A00; --amber-bg: #FEF3DC; --red: #B91C1C; --red-bg: #FEF2F2;
+    --blue: #1251AA; --blue-bg: #EFF5FF; --gray: #4B4B48; --gray-bg: #F1EFE8;
+    --purple: #5B21B6; --purple-bg: #F3EFFE;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 52px; position: sticky; top: 0; z-index: 100; }
+  .nav-brand { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .nav-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+  .nav-meta { font-size: 12px; color: var(--hint); }
+  .nav-actions { display: flex; gap: 8px; }
+  .btn-sm { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface); cursor: pointer; color: var(--text); font-weight: 500; transition: background 0.15s; }
+  .btn-sm:hover { background: var(--bg); }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:hover { background: #1E3FE0; }
+  .layout { display: grid; grid-template-columns: 260px 1fr 310px; height: calc(100vh - 52px); overflow: hidden; }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; }
+  .sidebar-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+  .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--hint); margin-bottom: 8px; }
+  .search-box { width: 100%; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-strong); font-size: 13px; background: var(--bg); color: var(--text); outline: none; }
+  .search-box:focus { border-color: var(--accent); }
+  .deliverable-item { padding: 10px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+  .deliverable-item:hover { background: var(--bg); }
+  .deliverable-item.active { background: var(--accent-soft); border-left: 3px solid var(--accent); padding-left: 13px; }
+  .d-name { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
+  .d-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .status-pill { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+  .main { overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .main-title { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); line-height: 1.3; }
+  .main-badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .ai-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .ai-card-header { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .ai-card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--hint); display: flex; align-items: center; gap: 6px; }
+  .ai-badge { font-size: 10px; background: var(--accent-soft); color: var(--accent); padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+  .ai-card-body { padding: 14px 16px; }
+  .summary-text { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .loading-pulse { color: var(--hint); font-style: italic; font-size: 13px; }
+
+  /* Action items */
+  .action-list { display: flex; flex-direction: column; gap: 8px; }
+  .action-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; }
+  .action-item.confirmed { background: var(--green-bg); border-color: var(--green-border); }
+  .action-item.editing { background: #FFFBEB; border-color: #FCD34D; }
+  .action-num { font-size: 11px; font-weight: 700; color: var(--accent); min-width: 18px; margin-top: 2px; flex-shrink: 0; }
+  .action-item.confirmed .action-num { color: var(--green); }
+  .action-content { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .action-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .action-item.confirmed .action-text { color: var(--green); }
+  .action-edit-input { font-size: 13px; color: var(--text); line-height: 1.5; border: 1px solid #FCD34D; border-radius: 5px; padding: 4px 8px; background: #fff; width: 100%; outline: none; font-family: inherit; resize: none; }
+  .action-edit-input:focus { border-color: var(--accent); }
+  .action-btns { display: flex; gap: 5px; align-items: center; }
+  .act-btn { font-size: 11px; padding: 3px 9px; border-radius: 5px; border: 1px solid var(--border-strong); cursor: pointer; font-weight: 500; transition: all 0.15s; background: var(--surface); color: var(--text); }
+  .act-btn.confirm-btn { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+  .act-btn.confirm-btn:hover { background: #C6EDD5; }
+  .act-btn.edit-btn { background: var(--bg); color: var(--muted); }
+  .act-btn.edit-btn:hover { background: #FEF3DC; color: var(--amber); border-color: #FCD34D; }
+  .act-btn.save-btn { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .act-btn.save-btn:hover { background: #D8DFFE; }
+  .act-btn.cancel-btn { color: var(--hint); }
+  .act-btn.cancel-btn:hover { background: var(--red-bg); color: var(--red); }
+  .confirmed-tick { color: var(--green); font-size: 13px; margin-top: 2px; flex-shrink: 0; }
+
+  /* Rejected state */
+  .rejected-notice { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; background: var(--red-bg); border-radius: 8px; border: 1px solid #FECACA; }
+  .rejected-icon { font-size: 18px; flex-shrink: 0; }
+  .rejected-title { font-size: 13px; font-weight: 600; color: var(--red); margin-bottom: 3px; }
+  .rejected-sub { font-size: 12px; color: #DC2626; opacity: 0.8; line-height: 1.5; }
+
+  /* On-hold / stalled state */
+  .stall-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .stall-header { padding: 11px 16px; background: #FEF3DC; border-bottom: 1px solid #FDE68A; display: flex; align-items: center; gap: 8px; }
+  .stall-header-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--amber); }
+  .stall-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .stall-row { display: flex; gap: 10px; }
+  .stall-label { font-size: 11px; font-weight: 600; color: var(--hint); text-transform: uppercase; letter-spacing: 0.04em; min-width: 110px; padding-top: 1px; }
+  .stall-val { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+  /* Thread */
+  .thread-section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .thread-header { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--hint); }
+  .thread-body { max-height: 240px; overflow-y: auto; }
+  .thread-msg { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .thread-msg:last-child { border-bottom: none; }
+  .thread-author { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .thread-date { font-size: 10px; color: var(--hint); font-weight: 400; }
+  .thread-body-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .thread-reply { border-left: 3px solid var(--border-strong); margin-left: 16px; padding-left: 12px; }
+
+  /* Chat */
+  .chat-panel { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+  .chat-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .chat-title { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .chat-sub { font-size: 11px; color: var(--hint); margin-top: 2px; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-bubble { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.55; max-width: 93%; }
+  .bubble-user { background: var(--accent); color: #fff; align-self: flex-end; border-radius: 10px 10px 3px 10px; }
+  .bubble-ai { background: var(--bg); color: var(--text); align-self: flex-start; border: 1px solid var(--border); border-radius: 10px 10px 10px 3px; }
+  .bubble-label { font-size: 10px; color: var(--hint); margin-bottom: 3px; }
+  .chat-suggestions { padding: 8px 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 5px; }
+  .sug-label { font-size: 10px; color: var(--hint); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+  .sug-chip { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer; transition: all 0.12s; text-align: left; }
+  .sug-chip:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .chat-input-row { padding: 10px 12px; border-top: 1px solid var(--border); display: flex; gap: 7px; }
+  .chat-input { flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-strong); font-size: 13px; background: var(--bg); color: var(--text); outline: none; }
+  .chat-input:focus { border-color: var(--accent); background: var(--surface); }
+  .chat-send { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .chat-send:disabled { background: var(--hint); cursor: not-allowed; }
+  .kpi-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .kpi-val { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+  .kpi-label { font-size: 11px; color: var(--hint); margin-top: 2px; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--hint); }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+  .s-lead{background:var(--amber-bg);color:var(--amber)}.s-rejected{background:var(--red-bg);color:var(--red)}.s-deferred{background:var(--gray-bg);color:var(--gray)}.s-awaiting{background:var(--blue-bg);color:var(--blue)}.s-deployed{background:var(--green-bg);color:var(--green)}.s-onhold{background:var(--gray-bg);color:var(--gray)}.s-dev{background:var(--purple-bg);color:var(--purple)}.s-uat{background:var(--blue-bg);color:var(--blue)}.s-assignment{background:var(--accent-soft);color:var(--accent)}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand"><div class="nav-dot"></div>Vera · Custom Dev Intelligence</div>
+  <div class="nav-meta">13 deliverables · powered by Claude</div>
+  <div class="nav-actions">
+    <button class="btn-sm" onclick="summarizeAll()">Summarise all</button>
+    <button class="btn-sm btn-primary" onclick="exportReport()">Export report</button>
+  </div>
+</nav>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Deliverables</div>
+      <input class="search-box" type="text" placeholder="Search..." oninput="filterDeliverables(this.value)" />
+    </div>
+    <div id="deliverable-list"></div>
+  </div>
+  <div class="main" id="main-panel">
+    <div class="kpi-bar" id="kpi-bar"></div>
+    <div class="empty-state">
+      <div style="font-size:32px;margin-bottom:12px">↖</div>
+      <div style="font-size:14px;font-weight:500;color:var(--muted);margin-bottom:6px">Select a deliverable</div>
+      <div style="font-size:12px">Claude will summarise the Chatter thread and extract action items.</div>
+    </div>
+  </div>
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-title">Ask Claude</div>
+      <div class="chat-sub">Ask about any deliverable or the full pipeline</div>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="bubble-label">Claude</div>
+      <div class="chat-bubble bubble-ai">Hi! I have full context on all 13 deliverables. Ask me anything — what's blocked, who needs follow-up, or ask for a leadership summary.</div>
+    </div>
+    <div class="chat-suggestions">
+      <div class="sug-label">Quick questions</div>
+      <button class="sug-chip" onclick="askSuggestion(this.textContent)">What deliverables are blocked or on hold?</button>
+      <button class="sug-chip" onclick="askSuggestion(this.textContent)">Which ones need urgent follow-up?</button>
+      <button class="sug-chip" onclick="askSuggestion(this.textContent)">Give me a leadership summary of the full pipeline</button>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" type="text" placeholder="Ask about your deliverables..." onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="chat-send" id="chat-send-btn" onclick="sendChat()">Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DELIVERABLES = [
+  {name:"HLE - HFHI Int'l Results Measurement - Project Role-Based Sharing",status:"Lead",post_count:1,comment_count:0,thread:"Christine Jonason: here is the dev deliverable I've opened for HFHI's PRBS requirements. Details to come. This 25k estimate is based on ~30 days of dev time (840 USD/day). We originally estimated 50+ days of LOE for the full PRBS module. REPLIES: (no replies yet)"},
+  {name:"HLE - AVPN - Biography Field Splitting",status:"Rejected",post_count:4,comment_count:21,thread:"Nerissa Roberts: I have a new dev deliverable which is quite urgent. I will create a user for the relevant person in the sandbox. | Nerissa Roberts: AVPN has asked about the 45 hours - are we allowed to share the HLE Tech Design with clients? | Riddhi: Just checking in on client approval. REPLIES: Abhishek Pise (2026-01-27): requires 45hrs to complete. Detailed breakdown attached. | Nerissa Roberts (2026-01-27): All details confirmed, this is a billable task. | Nerissa (2026-06-23): I'm not sure, best to confirm with Shivi. Deliverable rejected by client — not proceeding."},
+  {name:"JRR - Nationality Profile Records Deletion",status:"Deferred",post_count:2,comment_count:2,thread:"Akshay Mehta: Created this deliverable for JRR, could you please help us with HLE. REPLIES: Riddhi (2026-02-05): Please confirm all relevant documents are attached. | Abhishek Pise (2026-02-06): requires 22hrs. HLE breakdown and Tech design attached. Client confirmed comfortable with manual updates — not proceeding with automated solution."},
+  {name:"HLE - IOC-SMART Assessment Custom Form Assessment tool-040126",status:"Awaiting SoW",post_count:2,comment_count:16,thread:"Riddhi: Noting here for visibility. This is a billable request. Kindly confirm once all relevant documents have been added. | Riddhi: Status updated to Awaiting SoW. Once approval received, update Status to Dev Assignment. REPLIES: Riddhi (2026-06-02): We usually require tasks to be created against which devs log hours. | IOC contact: Awaiting response on SoW approval."},
+  {name:"WVI - Code Review - T-Code Validation",status:"Deployed",post_count:4,comment_count:23,thread:"Riddhi: Abhishek Pise can take this up next week. | Jordan Fraser: Deliverable for AI-generated code review to resolve BUG 220593 and BUG 220591. | Abhishek Pise: Fixed and pushed the code. CR and deployment log attached. | Riddhi: Could you confirm whether we may proceed with closing this deliverable? REPLIES: Adalto Silva (2026-06-01): Logging hours retroactively will disrupt internal financial processes. Would dev logging hours for June be ok? | Riddhi: Deliverable deployed successfully."},
+  {name:"OXFAM - HLE - UAT Sandbox Refresh",status:"Awaiting SoW",post_count:3,comment_count:19,thread:"Nerissa Roberts: Created this Dev Deliverable for Oxfam — need an LOE. Admins get locked out after a sandbox refresh and only the person who performed it can unlock accounts. | Abhishek Pise: This would require 18hrs to complete. REPLIES: Nerissa Roberts (2026-06-03): Let's make the delivery date end of June. | Riddhi (2026-05-08): We can pick this up next week and will keep you posted with the LOE."},
+  {name:"HLE - WVI - Custom Framework LWC and Copy from Another Framework",status:"On-hold",post_count:2,comment_count:19,thread:"Riddhi: Before we can take this up for HLE Estimation, could you please share the tentative timelines and confirm whether this would be a billable or non-billable request. | Riddhi: Once there is a go-ahead to proceed, kindly update the Status to Dev Assignment. REPLIES: Roberta Gomes (2026-05-14): Timeline: WVI expects features implemented by Jan/2027, however HLE is needed by May 18th 2026. This is a billable request. | Riddhi (2026-06-02): Since Abhishek worked on HLE Estimation, could you please create a task for him to log his hours for May? No confirmation received yet — on hold pending client go-ahead."},
+  {name:"HLE - WFP - Generate PDF button not loading",status:"On-hold",post_count:4,comment_count:34,thread:"Masingita Solani Maluleke: Can you please assist with this deliverable — this is my first dev deliverable. | Abhishek Pise: WFPMS-48 — root cause found, fix validated. The Generate PDF Document hang on large Reporting Periods is a bug inside our PDF library code, not Apex or data volume. Fix is ready. Need sign-off on one design decision. | Riddhi: Status updated to Awaiting SoW. REPLIES: Masingita (2026-05-13): Waiting for client to confirm go-ahead on the fix approach. | Shivi Saxena (2026-05-13): Bare and Bhogaonkar now manage Custom Development function. Root cause identified, fix ready, blocked on client approval."},
+  {name:"HLE - CG - Review of Apex/Automation piece for a Solution Design",status:"Development Requested",post_count:3,comment_count:15,thread:"Riddhi: We have taken note of this deliverable and will keep an eye out for the Apex deliverables. Once all the relevant documents are ready, kindly update the Status to Development Requested. | Riddhi: Could you confirm whether this will be a billable engagement? REPLIES: Olivia Blake (2026-05-19): We are anticipating handing off the documentation of the requirements by EOD on May 29th. | Olivia Blake: At long last we are ready to submit our Apex Specs after confirming all details with the client."},
+  {name:"WVI - Code Review - FY Aggregation",status:"UAT",post_count:2,comment_count:27,thread:"Jordan Fraser: Putting this on your radar. I am currently developing the code with Claude Code. Can you let me know developer availability for a code review? There are 5 classes and around 1700 lines of code including tests. | Jordan Fraser: This is ready for review. Specification, example calculations spreadsheet, and all classes are in the repository. REPLIES: Yogesh Narayan Kanaki (2026-06-15): I have updated the deployment log entries. | Riddhi: UAT in progress, awaiting sign-off from WVI."},
+  {name:"WFA - Dev advisory requested",status:"Dev Assignment",post_count:1,comment_count:24,thread:"Shelley Burge: Please find the dev request for WFA. REPLIES: Riddhi (2026-06-24): Developer can be onboarded by end of this week, should take around 3 hours. | Shivanshi Dappar (2026-06-25): Both users are now created in the config sandbox! | Riddhi (2026-06-25): We'll keep you posted on further updates when dev is onboarded. | Shelley Burge (2026-06-25): Will wait to hear how we progress and what may be needed. | Riddhi (2026-06-26): Dev onboarding in progress."},
+  {name:"HLE - KNH - Custom File/Folder Upload & Preview Page (ENAIO)",status:"Development Requested",post_count:1,comment_count:13,thread:"Riddhi: Thanks for creating this deliverable. A call has been set up to align on the updated requirements. Could you confirm if high level estimates will be required from Technology QA team? REPLIES: Jovana Mandic (2026-06-22): Yes correct, we have a call with ENAIO and KNH tomorrow. Abhishek has been added and will attend. | Hasti Sawla (2026-06-23): Yes, Tech QA will be needed. | Jovana Mandic (2026-06-25): I have now set up the NB task for everyone and linked it to the original request."},
+  {name:"AVPN - HLE - Removal of Apex Triggers",status:"Development Requested",post_count:1,comment_count:11,thread:"Nerissa Roberts: This is a new Dev Deliverable. I need this in order to uninstall a managed package which the client no longer wants to pay for. REPLIES: Riddhi (2026-06-23): Thanks Christelle for confirming! | Abhishek Pise (2026-06-24): Can you post the credential record here so I could log in and see those triggers. | Nerissa Roberts (2026-06-24): Phishing-resistant MFA is enabled. I'll create a temporary user for you shortly. Done — please let me know when you are done so I can deactivate your user. | Nerissa Roberts (2026-06-26): Saw a popup that dev can take this up next week. What is the LOE for this task?"}
+];
+
+const STATUS_CLASS = {
+  'Lead':'s-lead','Rejected':'s-rejected','Deferred':'s-deferred',
+  'Awaiting SoW':'s-awaiting','Deployed':'s-deployed','On-hold':'s-onhold',
+  'Development Requested':'s-dev','UAT':'s-uat','Dev Assignment':'s-assignment'
+};
+
+const REJECTED_STATUSES = ['Rejected', 'Deferred'];
+const STALLED_STATUSES = ['On-hold'];
+
+let currentIdx = null;
+let aiCache = {};
+let actionStates = {}; // {idx: [{text, confirmed, editing}]}
+let chatHistory = [];
+
+const ALL_CONTEXT = DELIVERABLES.map(d =>
+  `"${d.name}" | Status: ${d.status} | Posts: ${d.post_count} | Replies: ${d.comment_count}\nThread: ${d.thread}`
+).join('\n\n---\n\n');
+
+function statusClass(s){ return STATUS_CLASS[s]||'s-lead'; }
+
+function renderKPIs(){
+  const c={};
+  DELIVERABLES.forEach(d=>{c[d.status]=(c[d.status]||0)+1;});
+  const blocked=(c['On-hold']||0)+(c['Rejected']||0)+(c['Deferred']||0);
+  const active=(c['Development Requested']||0)+(c['Dev Assignment']||0)+(c['UAT']||0);
+  const awaiting=(c['Awaiting SoW']||0)+(c['Lead']||0);
+  document.getElementById('kpi-bar').innerHTML=`
+    <div class="kpi-card"><div class="kpi-val">${DELIVERABLES.length}</div><div class="kpi-label">Total</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">${active}</div><div class="kpi-label">In development</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--amber)">${awaiting}</div><div class="kpi-label">Awaiting approval</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">${blocked}</div><div class="kpi-label">Blocked / stalled</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">${c['Deployed']||0}</div><div class="kpi-label">Deployed</div></div>`;
+}
+
+function renderList(filter=''){
+  const list=document.getElementById('deliverable-list');
+  const filtered=DELIVERABLES.filter(d=>d.name.toLowerCase().includes(filter.toLowerCase())||d.status.toLowerCase().includes(filter.toLowerCase()));
+  list.innerHTML=filtered.map(d=>{
+    const i=DELIVERABLES.indexOf(d);
+    const confirmed=actionStates[i]?actionStates[i].filter(a=>a.confirmed).length:0;
+    const total=actionStates[i]?actionStates[i].length:0;
+    const progressBadge=total>0?`<span style="font-size:10px;color:var(--green);background:var(--green-bg);padding:1px 6px;border-radius:8px">${confirmed}/${total} done</span>`:'';
+    return `<div class="deliverable-item${i===currentIdx?' active':''}" onclick="selectDeliverable(${i})">
+      <div class="d-name">${d.name}</div>
+      <div class="d-meta">
+        <span class="status-pill ${statusClass(d.status)}">${d.status}</span>
+        <span style="font-size:10px;color:var(--hint)">${d.comment_count} replies</span>
+        ${progressBadge}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterDeliverables(val){ renderList(val); }
+
+async function selectDeliverable(idx){
+  currentIdx=idx;
+  renderList(document.querySelector('.search-box').value);
+  const d=DELIVERABLES[idx];
+  const isRejected=REJECTED_STATUSES.includes(d.status);
+  const isStalled=STALLED_STATUSES.includes(d.status);
+  const main=document.getElementById('main-panel');
+
+  main.innerHTML=`
+    <div class="kpi-bar" id="kpi-bar"></div>
+    <div>
+      <div class="main-title">${d.name}</div>
+      <div class="main-badges">
+        <span class="status-pill ${statusClass(d.status)}">${d.status}</span>
+        <span class="status-pill" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">${d.post_count} post${d.post_count!==1?'s':''}</span>
+        <span class="status-pill" style="background:var(--bg);color:var(--muted);border:1px solid var(--border)">${d.comment_count} replies</span>
+      </div>
+    </div>
+
+    <div class="ai-card">
+      <div class="ai-card-header">
+        <div class="ai-card-label">AI summary</div>
+        <span class="ai-badge">Claude</span>
+      </div>
+      <div class="ai-card-body">
+        <div class="summary-text" id="summary-text"><span class="loading-pulse">Analysing Chatter thread...</span></div>
+      </div>
+    </div>
+
+    ${isStalled ? `<div class="stall-card" id="stall-card">
+      <div class="stall-header">
+        <span style="font-size:14px">⏸</span>
+        <div class="stall-header-label">Stalled deliverable details</div>
+      </div>
+      <div class="stall-body">
+        <div class="stall-row"><div class="stall-label">Stall reason</div><div class="stall-val" id="stall-reason"><span class="loading-pulse">Extracting from thread...</span></div></div>
+        <div class="stall-row"><div class="stall-label">Expected pickup</div><div class="stall-val" id="stall-pickup"><span class="loading-pulse">Checking...</span></div></div>
+        <div class="stall-row"><div class="stall-label">Last activity</div><div class="stall-val" id="stall-last"><span class="loading-pulse">Checking...</span></div></div>
+      </div>
+    </div>` : ''}
+
+    <div class="ai-card">
+      <div class="ai-card-header">
+        <div class="ai-card-label">Key action items</div>
+        <span class="ai-badge">Claude</span>
+      </div>
+      <div class="ai-card-body">
+        <div id="action-list">
+          ${isRejected
+            ? `<div class="rejected-notice">
+                <div class="rejected-icon">🚫</div>
+                <div>
+                  <div class="rejected-title">No action items — deliverable ${d.status.toLowerCase()}</div>
+                  <div class="rejected-sub">This deliverable has been ${d.status.toLowerCase()} and is no longer active. No further action is required unless it is reopened or escalated.</div>
+                </div>
+               </div>`
+            : `<span class="loading-pulse">Extracting action items...</span>`
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="thread-section">
+      <div class="thread-header">Chatter thread (${d.post_count+d.comment_count} messages)</div>
+      <div class="thread-body">${renderThread(d)}</div>
+    </div>`;
+
+  renderKPIs();
+  if(!isRejected) await generateAI(idx);
+}
+
+function renderThread(d){
+  const parts=d.thread.split(' REPLIES: ');
+  const posts=parts[0].split(' | ').filter(Boolean);
+  const replies=parts[1]?parts[1].split(' | ').filter(Boolean):[];
+  let html=posts.map(p=>{
+    const c=p.indexOf(': ');
+    const author=c>-1?p.slice(0,c):'Unknown';
+    const body=c>-1?p.slice(c+2):p;
+    return `<div class="thread-msg"><div class="thread-author">${author} <span class="thread-date">original post</span></div><div class="thread-body-text">${body}</div></div>`;
+  }).join('');
+  html+=replies.map(r=>{
+    const dm=r.match(/\((\d{4}-\d{2}-\d{2})\)/);
+    const date=dm?dm[1]:'';
+    const am=r.match(/^([^(]+)/);
+    const author=am?am[1].replace(/:\s*$/,'').trim():'Unknown';
+    const body=r.replace(/^[^:]+:\s*/,'').replace(/\(\d{4}-\d{2}-\d{2}\):\s*/,'');
+    return `<div class="thread-msg thread-reply"><div class="thread-author">${author} <span class="thread-date">${date}</span></div><div class="thread-body-text">${body}</div></div>`;
+  }).join('');
+  return html;
+}
+
+async function generateAI(idx){
+  if(aiCache[idx]){
+    applyAIResult(idx, aiCache[idx]);
+    return;
+  }
+  const d=DELIVERABLES[idx];
+  const isStalled=STALLED_STATUSES.includes(d.status);
+
+  const stallPart=isStalled?`
+"stall_reason": "one sentence explaining why this is on hold based on the thread",
+"expected_pickup": "date or timeframe if mentioned, otherwise 'Not confirmed'",
+"last_activity": "most recent update date and person from the thread",`:'';
+
+  const prompt=`You are an AI assistant for a Program Manager at Vera Solutions (Salesforce custom dev company). Analyse this Chatter thread and respond ONLY with valid JSON matching exactly this structure:
+{
+  "summary": "one sentence current status, max 25 words, present tense",${stallPart}
+  "actions": ["action item with owner name e.g. Riddhi to follow up with client on SoW approval", "action 2", "action 3"]
+}
+
+Rules:
+- summary: factual, plain language, no jargon
+- actions: 2-4 concrete next steps with specific owner names where identifiable
+- ${isStalled?'stall_reason: what is blocking progress exactly\n- expected_pickup: extract any mentioned timeline or say Not confirmed\n- last_activity: who last posted and approximate date\n- ':''}Return ONLY the JSON object, no markdown, no explanation
+
+Deliverable: "${d.name}"
+Status: ${d.status}
+Thread:
+${d.thread}`;
+
+  try{
+    const res=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const raw=data.content[0].text.trim().replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(raw);
+    aiCache[idx]=parsed;
+    if(currentIdx===idx) applyAIResult(idx,parsed);
+  }catch(e){
+    if(currentIdx===idx){
+      const el=document.getElementById('summary-text');
+      if(el) el.textContent='Could not generate summary — check API connection.';
+      const al=document.getElementById('action-list');
+      if(al) al.innerHTML='<span style="color:var(--hint);font-size:12px">Action items unavailable.</span>';
+    }
+  }
+}
+
+function applyAIResult(idx, parsed){
+  const d=DELIVERABLES[idx];
+  const isStalled=STALLED_STATUSES.includes(d.status);
+
+  const sumEl=document.getElementById('summary-text');
+  if(sumEl) sumEl.textContent=parsed.summary;
+
+  if(isStalled){
+    const sr=document.getElementById('stall-reason');
+    const sp=document.getElementById('stall-pickup');
+    const sl=document.getElementById('stall-last');
+    if(sr) sr.textContent=parsed.stall_reason||'Not specified in thread';
+    if(sp) sp.textContent=parsed.expected_pickup||'Not confirmed';
+    if(sl) sl.textContent=parsed.last_activity||'Unknown';
+  }
+
+  if(!actionStates[idx]){
+    actionStates[idx]=(parsed.actions||[]).map(a=>({text:a,confirmed:false,editing:false}));
+  }
+  renderActionList(idx);
+}
+
+function renderActionList(idx){
+  const el=document.getElementById('action-list');
+  if(!el||currentIdx!==idx) return;
+  const items=actionStates[idx]||[];
+  if(!items.length){ el.innerHTML='<span style="color:var(--hint);font-size:12px">No action items found.</span>'; return; }
+  el.innerHTML=items.map((item,i)=>{
+    if(item.confirmed){
+      return `<div class="action-item confirmed" id="action-${i}">
+        <div class="confirmed-tick">✓</div>
+        <div class="action-content">
+          <div class="action-text">${item.text}</div>
+          <div class="action-btns">
+            <button class="act-btn cancel-btn" onclick="unconfirmAction(${idx},${i})">Undo</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    if(item.editing){
+      return `<div class="action-item editing" id="action-${i}">
+        <div class="action-num">${i+1}</div>
+        <div class="action-content">
+          <textarea class="action-edit-input" id="edit-input-${i}" rows="2">${item.text}</textarea>
+          <div class="action-btns">
+            <button class="act-btn save-btn" onclick="saveEdit(${idx},${i})">Save</button>
+            <button class="act-btn cancel-btn" onclick="cancelEdit(${idx},${i})">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `<div class="action-item" id="action-${i}">
+      <div class="action-num">${i+1}</div>
+      <div class="action-content">
+        <div class="action-text">${item.text}</div>
+        <div class="action-btns">
+          <button class="act-btn confirm-btn" onclick="confirmAction(${idx},${i})">✓ Confirm</button>
+          <button class="act-btn edit-btn" onclick="startEdit(${idx},${i})">Edit</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  // Focus textarea if editing
+  items.forEach((item,i)=>{ if(item.editing){ const t=document.getElementById(`edit-input-${i}`); if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length);} } });
+  // Update sidebar progress badges
+  renderList(document.querySelector('.search-box').value);
+}
+
+function confirmAction(idx,i){
+  if(!actionStates[idx]) return;
+  actionStates[idx][i].confirmed=true;
+  actionStates[idx][i].editing=false;
+  renderActionList(idx);
+}
+function unconfirmAction(idx,i){
+  if(!actionStates[idx]) return;
+  actionStates[idx][i].confirmed=false;
+  renderActionList(idx);
+}
+function startEdit(idx,i){
+  if(!actionStates[idx]) return;
+  actionStates[idx][i].editing=true;
+  renderActionList(idx);
+}
+function saveEdit(idx,i){
+  const input=document.getElementById(`edit-input-${i}`);
+  if(!input||!actionStates[idx]) return;
+  const val=input.value.trim();
+  if(!val) return;
+  actionStates[idx][i].text=val;
+  actionStates[idx][i].editing=false;
+  if(aiCache[idx]) aiCache[idx].actions[i]=val;
+  renderActionList(idx);
+}
+function cancelEdit(idx,i){
+  if(!actionStates[idx]) return;
+  actionStates[idx][i].editing=false;
+  renderActionList(idx);
+}
+
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg) return;
+  input.value='';
+  appendBubble(msg,'user');
+  document.getElementById('chat-send-btn').disabled=true;
+  const lid=appendBubble('Thinking...','ai',true);
+  chatHistory.push({role:'user',content:msg});
+  const sys=`You are an AI assistant for Riddhi Bhogaonkar, Program Manager for the Custom Development pillar at Vera Solutions. You have full context on all 13 deliverables. Answer concisely in 2-4 sentences. Be direct and specific — name deliverables, owners, and statuses. Plain language suitable for a PM or leadership audience.\n\nFULL CONTEXT:\n${ALL_CONTEXT}`;
+  try{
+    const res=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,system:sys,messages:chatHistory})
+    });
+    const data=await res.json();
+    const reply=data.content[0].text;
+    chatHistory.push({role:'assistant',content:reply});
+    updateBubble(lid,reply);
+  }catch(e){ updateBubble(lid,'Could not reach Claude — check connection.'); }
+  document.getElementById('chat-send-btn').disabled=false;
+}
+
+let bc=0;
+function appendBubble(text,role,isLoading=false){
+  const id='b'+(++bc);
+  const msgs=document.getElementById('chat-messages');
+  const div=document.createElement('div');
+  div.innerHTML=`<div class="bubble-label">${role==='user'?'You':'Claude'}</div><div class="chat-bubble bubble-${role}" id="${id}"${isLoading?' style="color:var(--hint);font-style:italic"':''}>${text}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  return id;
+}
+function updateBubble(id,text){
+  const el=document.getElementById(id);
+  if(el){el.textContent=text;el.style.color='';el.style.fontStyle='';}
+  document.getElementById('chat-messages').scrollTop=9999;
+}
+function askSuggestion(text){ document.getElementById('chat-input').value=text; sendChat(); }
+
+async function summarizeAll(){
+  for(let i=0;i<DELIVERABLES.length;i++){
+    if(!aiCache[i]&&!REJECTED_STATUSES.includes(DELIVERABLES[i].status)) await generateAI(i);
+  }
+  alert('All summaries generated! Click any deliverable to view.');
+}
+
+function exportReport(){
+  let r=`VERA — CUSTOM DEVELOPMENT PIPELINE REPORT\nGenerated: ${new Date().toLocaleDateString()}\n${'='.repeat(60)}\n\n`;
+  DELIVERABLES.forEach((d,i)=>{
+    r+=`${d.name}\nStatus: ${d.status}\n`;
+    if(aiCache[i]){
+      r+=`Summary: ${aiCache[i].summary}\n`;
+      if(aiCache[i].stall_reason) r+=`Stall reason: ${aiCache[i].stall_reason}\nExpected pickup: ${aiCache[i].expected_pickup}\n`;
+      const acts=actionStates[i]||[];
+      if(acts.length){ r+=`Action items:\n`; acts.forEach((a,j)=>r+=`  ${j+1}. [${a.confirmed?'CONFIRMED':'PENDING'}] ${a.text}\n`); }
+    }
+    r+='\n';
+  });
+  const blob=new Blob([r],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='vera_pipeline_report.txt';
+  a.click();
+}
+
+renderKPIs();
+renderList();
+</script>
+</body>
+</html>
