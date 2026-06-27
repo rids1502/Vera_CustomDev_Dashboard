@@ -367,13 +367,22 @@ Status: ${d.status}
 Thread:
 ${d.thread}`;
 
-  try{
+try{
     const res=await fetch('/api/chat',{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,messages:[{role:'user',content:prompt}]})
     });
     const data=await res.json();
+    
+    // Show raw error on screen for debugging
+    if(!data.content || !data.content[0]){
+      if(currentIdx===idx){
+        document.getElementById('summary-text').textContent='API Error: ' + JSON.stringify(data);
+      }
+      return;
+    }
+    
     const raw=data.content[0].text.trim().replace(/```json|```/g,'').trim();
     const parsed=JSON.parse(raw);
     aiCache[idx]=parsed;
@@ -381,9 +390,7 @@ ${d.thread}`;
   }catch(e){
     if(currentIdx===idx){
       const el=document.getElementById('summary-text');
-      if(el) el.textContent='Could not generate summary — check API connection.';
-      const al=document.getElementById('action-list');
-      if(al) al.innerHTML='<span style="color:var(--hint);font-size:12px">Action items unavailable.</span>';
+      if(el) el.textContent='Error: ' + e.message;
     }
   }
 }
